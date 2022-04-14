@@ -432,3 +432,45 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return -1;
   }
 }
+
+void
+vmprintChild(pagetable_t pagetable, int level)
+{
+
+  // 拼接打印的前缀字符
+  char *pre = " ..";
+  char *pre_start = pre;
+  char level_pre[50] = {0};
+  int level_pre_index = 0;
+  for (int k = level; k >= 0; k--)
+  {
+    int n = strlen(pre);
+    while(n-- > 0 && (level_pre[level_pre_index++] = *pre++) != 0)
+    ;
+    pre = pre_start;
+  }
+
+  // 遍历页表，打印页表项
+  for(int i = 0; i < 512; i++) {
+    pte_t pte = pagetable[i];
+    uint64 child = PTE2PA(pte);
+    if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0) {
+      printf("%s%d: pte %p pa %p\n", level_pre, i, pte, child);
+      // 递归遍历
+      vmprintChild((pagetable_t)child, level + 1);
+    } else if (pte & PTE_V) {
+      printf("%s%d: pte %p pa %p\n", level_pre, i, pte, child);
+    }
+  }
+
+}
+
+// 打印页表
+void
+vmprint(pagetable_t pagetable)
+{
+  printf("page table %p\n", pagetable);
+  vmprintChild(pagetable, 0);
+}
+
+
