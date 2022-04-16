@@ -81,6 +81,40 @@ int
 sys_pgaccess(void)
 {
   // lab pgtbl: your code here.
+
+  uint64 base;
+  int len;
+  uint64 mask;
+  unsigned int abits = 0;
+  if(argaddr(0, &base) < 0)
+    return -1;
+  if(argint(1, &len) < 0)
+    return -1;
+  if(argaddr(2, &mask) < 0)
+    return -1;
+  pagetable_t pgTable = myproc()->pagetable;
+  vmprint(pgTable);
+  // 获取va地址的pte
+  for (int i = 0; i < MAXSCAN && i < len; i++)
+  {
+    pte_t *pte = walk(pgTable, base + (PGSIZE * i), 0);
+    
+    if((*pte & PTE_V) == 0)
+      return -1;
+    if((*pte & PTE_U) == 0)
+      return -1;
+    // 检查pte是否被访问
+    if(*pte & PTE_A) {
+      // 设置位图
+      abits = abits | (1<<i);
+      // 清空PTE_A
+      *pte &= ~PTE_A;
+    }
+  }
+  // 将abits复制到用户空间
+  if(copyout(pgTable, mask, (char *)&abits, sizeof(abits)) < 0)
+      return -1;
+  
   return 0;
 }
 #endif
